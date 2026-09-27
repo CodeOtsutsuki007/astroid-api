@@ -17,7 +17,7 @@ export class RiskService {
   constructor(
     private readonly engine: RiskEngine,
     private readonly eventBus: EventBusService,
-    private readonly prisma?: PrismaService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -72,27 +72,19 @@ export class RiskService {
 
     const input: RiskFactorsInput = {
       amount: payload.amount ? parseFloat(payload.amount) : 0,
-      recipientAddress: payload.recipientAddress,
     };
 
     const assessment = this.engine.assess(input);
 
-    if (organizationId && transactionId && this.prisma) {
-      try {
-        await this.prisma.riskAssessment.create({
-          data: {
-            organizationId,
-            transactionId,
-            score: assessment.score,
-            band: assessment.band,
-            factors: assessment.factors as unknown as import('@prisma/client').Prisma.InputJsonValue,
-            canAutoExecute: assessment.canAutoExecute,
-          },
-        });
-      } catch {
-        // Fallback if RiskAssessment model is not yet provisioned in db or already exists
-      }
-    }
+    await this.prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        riskScore: assessment.score,
+        riskBand: assessment.band,
+      },
+    }).catch(() => {
+      // If transaction record is not found or fails to update directly, ignore or handle gracefully
+    });
 
     await this.eventBus.emit(
       DomainEventName.RiskEvaluated,

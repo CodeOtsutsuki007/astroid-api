@@ -1,46 +1,71 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Test, TestingModule } from '@nestjs/testing';
 import { RiskService } from './risk.service';
 import { RiskEngine } from './risk.engine';
 import { EventBusService } from '../../events/event-bus.service';
-import { DomainEventName } from '../../events/event-names';
+import { PrismaService } from '../../database/prisma.service';
 import { DomainEventEnvelope, TransactionInitiatedPayload } from '../../events/domain-event.types';
+import { DomainEventName } from '../../events/event-names';
+import { describe, expect, it, vi } from 'vitest';
 import { RiskFactorsInput } from './risk.types';
 
-describe('RiskService Event Handler', () => {
-  let riskService: RiskService;
-  let riskEngine: RiskEngine;
+describe('RiskService event handling', () => {
+  let service: RiskService;
   let eventBus: EventBusService;
+  let prisma: PrismaService;
 
-  beforeEach(() => {
-    riskEngine = new RiskEngine();
-    eventBus = {
-      emit: vi.fn().mockResolvedValue(undefined),
-    } as unknown as EventBusService;
-    riskService = new RiskService(riskEngine, eventBus);
-  });
+  const mockEventBus = {
+    emit: vi.fn().mockResolvedValue(true),
+};
 
-  it('should handle transaction.initiated event and emit risk.evaluated', async () => {
-    const payload: TransactionInitiatedPayload = {
-      transactionId: 'tx-123',
-      organizationId: 'org-456',
-      amount: '150.50',
-      recipientAddress: 'GABCD...',
-    };
+  const mockPrisma = {
+    transaction: {
+      update: vi.fn().mockResolvedValue({ id: 'tx-123' }),
+    },
+  };
 
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        RiskService,
+        RiskEngine,
+        { provide: EventBusService, useValue: mockEventBus },
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+
+    service = module.get<RiskService>(RiskService);
+    eventBus = module.get<EventBusService>(EventBusService);
+    prisma = module.get<PrismaService>(PrismaService);
+    vi.clearAllMocks();
+    });
+
+  it('should handle transaction.initiated event, evaluate risk, persist scores, and emit risk.evaluated', async () => {
     const envelope: DomainEventEnvelope<TransactionInitiatedPayload> = {
       name: DomainEventName.TransactionInitiated,
-      organizationId: 'org-456',
+      organizationId: 'org-1',
       aggregateType: 'transaction',
       aggregateId: 'tx-123',
-      payload,
+      actorId: 'user-1',
+      correlationId: 'corr-1',
       occurredAt: new Date(),
+      payload: {
+        transactionId: 'tx-123',
+        organizationId: 'org-1',
+        amount: '100.00',
+        asset: 'XLM',
+      },
     };
 
-    const assessment = await riskService.handleTransactionInitiated(envelope);
+    const assessment = await service.handleTransactionInitiated(envelope);
 
     expect(assessment).toBeDefined();
-    expect(typeof assessment.score).toBe('number');
-    expect(assessment.band).toBeDefined();
+    expect(prisma.transaction.update).toHaveBeenCalledWith({
+      where: { id: 'tx-123' },
+      data: {
+        riskScore: assessment.score,
+        riskBand: assessment.band,
+      },
+  });
     expect(eventBus.emit).toHaveBeenCalledWith(
       DomainEventName.RiskEvaluated,
       expect.objectContaining({
@@ -49,48 +74,11 @@ describe('RiskService Event Handler', () => {
         band: assessment.band,
       }),
       expect.objectContaining({
-        organizationId: 'org-456',
+        organizationId: 'org-1',
+        actorId: 'user-1',
         aggregateType: 'transaction',
         aggregateId: 'tx-123',
-      }),
-    );
-  });
-
-  it('should persist risk assessment to database when prisma client is provided', async () => {
-    const prismaMock = {
-      riskAssessment: {
-        create: vi.fn().mockResolvedValue({ id: 'risk-rec-1' }),
-      },
-    };
-    const serviceWithPrisma = new RiskService(riskEngine, eventBus, prismaMock as any);
-
-    const payload: TransactionInitiatedPayload = {
-      transactionId: 'tx-789',
-      organizationId: 'org-999',
-      amount: '500.00',
-      recipientAddress: 'GXYZ...',
-    };
-
-    const envelope: DomainEventEnvelope<TransactionInitiatedPayload> = {
-      name: DomainEventName.TransactionInitiated,
-      organizationId: 'org-999',
-      aggregateType: 'transaction',
-      aggregateId: 'tx-789',
-      payload,
-      occurredAt: new Date(),
-    };
-
-    const assessment = await serviceWithPrisma.handleTransactionInitiated(envelope);
-
-    expect(assessment).toBeDefined();
-    expect(prismaMock.riskAssessment.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          organizationId: 'org-999',
-          transactionId: 'tx-789',
-          score: assessment.score,
-          band: assessment.band,
-        }),
+        correlationId: 'corr-1',
       }),
     );
   });
