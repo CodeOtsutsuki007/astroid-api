@@ -9,12 +9,32 @@ import { DomainEventName } from '../../events/event-names';
  * RiskEvaluated domain event (with full factor breakdown for audit metadata),
  * and is called by the transactions pipeline.
  */
+import { OnEvent } from '@nestjs/event-emitter';
+
 @Injectable()
 export class RiskService {
   constructor(
     private readonly engine: RiskEngine,
     private readonly eventBus: EventBusService,
   ) {}
+
+  @OnEvent(DomainEventName.TransactionCreated, { async: true })
+  async handleTransactionCreated(payload: { transactionId: string; organizationId?: string; amount?: number; currency?: string; sourceAccount?: string; destinationAccount?: string; type?: string }): Promise<void> {
+    const orgId = payload.organizationId || 'default-org';
+    await this.evaluate(
+      orgId,
+      {
+        amount: payload.amount ?? 0,
+        currency: payload.currency ?? 'USD',
+        sourceAccount: payload.sourceAccount ?? 'unknown',
+        destinationAccount: payload.destinationAccount ?? 'unknown',
+        transactionType: (payload.type as any) ?? 'transfer',
+      },
+      {
+        transactionId: payload.transactionId,
+      },
+    );
+  }
 
   /**
    * Full evaluation with event emission. The emitted event payload includes
