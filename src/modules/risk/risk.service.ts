@@ -64,7 +64,7 @@ export class RiskService {
   @OnEvent(DomainEventName.TransactionCreated)
   async handleTransactionCreated(envelope: DomainEventEnvelope<TransactionCreatedPayload>): Promise<void> {
     try {
-      const { transactionId, amount, recipientAddress } = envelope.payload;
+      const { transactionId, amount } = envelope.payload;
       const organizationId = envelope.organizationId;
       if (!transactionId || !organizationId) {
         return;
