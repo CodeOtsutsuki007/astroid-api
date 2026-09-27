@@ -1,5 +1,5 @@
 import { DomainEventEnvelope } from './domain-event.types';
-import { DomainEventName } from './event-names';
+import { DomainEventNames, DomainEventName } from './event-names';
 
 export interface TransactionCreatedPayload {
   transactionId: string;
@@ -12,8 +12,9 @@ export interface TransactionCreatedPayload {
 export class TransactionCreatedEvent implements DomainEventEnvelope<TransactionCreatedPayload> {
   constructor(
     public readonly id: string,
-    public readonly name: DomainEventName.TransactionCreated,
+    public readonly name: DomainEventNames[DomainEventName.TransactionCreated],
     public readonly timestamp: number,
+    public readonly occurredAt: Date,
     public readonly aggregateType: string,
     public readonly aggregateId: string,
     public readonly payload: TransactionCreatedPayload,

@@ -19,19 +19,21 @@ export class RiskService {
   ) {}
 
   @OnEvent(DomainEventName.TransactionCreated, { async: true })
-  async handleTransactionCreated(payload: { transactionId: string; organizationId?: string; amount?: number; currency?: string; sourceAccount?: string; destinationAccount?: string; type?: string }): Promise<void> {
-    const orgId = payload.organizationId || 'default-org';
+  async handleTransactionCreated(event: { payload?: { transactionId: string; amount?: string; assetCode?: string; recipientAddress?: string; agentId?: string }; organizationId?: string; transactionId?: string; amount?: string; assetCode?: string; recipientAddress?: string }): Promise<void> {
+    const payload = event.payload || event;
+    const orgId = event.organizationId || 'default-org';
+    const txId = payload.transactionId || event.transactionId || '';
+    const amtNum = payload.amount ? parseFloat(payload.amount) : 0;
     await this.evaluate(
       orgId,
       {
-        amount: payload.amount ?? 0,
-        currency: payload.currency ?? 'USD',
-        sourceAccount: payload.sourceAccount ?? 'unknown',
-        destinationAccount: payload.destinationAccount ?? 'unknown',
-        transactionType: (payload.type as any) ?? 'transfer',
+        amount: isNaN(amtNum) ? 0 : amtNum,
+        sourceAccount: payload.agentId ?? 'unknown',
+        destinationAccount: payload.recipientAddress ?? 'unknown',
+        transactionType: 'transfer',
       },
       {
-        transactionId: payload.transactionId,
+        transactionId: txId,
       },
     );
   }
