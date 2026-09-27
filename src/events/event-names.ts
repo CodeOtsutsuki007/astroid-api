@@ -79,6 +79,7 @@ export const WEBHOOK_EVENTS: DomainEventNameType[] = [
   DomainEventName.ProposalApproved,
   DomainEventName.ProposalRejected,
   DomainEventName.TransactionCompleted,
+  DomainEventName.TransactionCreated,
   DomainEventName.TransactionFailed,
   DomainEventName.PolicyViolated,
   DomainEventName.BudgetExceeded,

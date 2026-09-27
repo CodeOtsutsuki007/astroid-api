@@ -59,4 +59,14 @@ export interface RiskEvaluatedPayload {
   transactionId?: string;
   score: number;
   band: string;
+  factors?: Record<string, unknown>;
+  canAutoExecute?: boolean;
+}
+
+export interface TransactionCreatedPayload {
+  transactionId: string;
+  walletId: string;
+  amount: string;
+  asset: string;
+  recipientAddress: string;
 }

@@ -3,6 +3,10 @@ import { RiskEngine } from './risk.engine';
 import { RiskAssessment, RiskConfig, RiskFactorsInput, RiskRule } from './risk.types';
 import { EventBusService } from '../../events/event-bus.service';
 import { DomainEventName } from '../../events/event-names';
+import { OnEvent } from '@nestjs/event-emitter';
+import { DomainEventEnvelope, TransactionCreatedPayload } from '../../events/domain-event.types';
+import { PrismaService } from '../../database/prisma.service';
+import { Logger } from '@nestjs/common';
 
 /**
  * Application-facing risk service. Wraps the pure {@link RiskEngine}, emits a
@@ -11,9 +15,12 @@ import { DomainEventName } from '../../events/event-names';
  */
 @Injectable()
 export class RiskService {
+  private readonly logger = new Logger(RiskService.name);
+
   constructor(
     private readonly engine: RiskEngine,
     private readonly eventBus: EventBusService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -52,5 +59,52 @@ export class RiskService {
     rules?: RiskRule[],
   ): RiskAssessment {
     return this.engine.assess(input, config, rules);
+  }
+
+  @OnEvent(DomainEventName.TransactionCreated)
+  async handleTransactionCreated(envelope: DomainEventEnvelope<TransactionCreatedPayload>): Promise<void> {
+    try {
+      const { transactionId, amount, recipientAddress } = envelope.payload;
+      const organizationId = envelope.organizationId;
+      if (!transactionId || !organizationId) {
+        return;
+      }
+
+      const amountNum = parseFloat(amount) || 0;
+      const assessment = this.engine.assess({
+        amount: amountNum,
+        recipientAddress,
+        isNewRecipient: false,
+        velocityCount1h: 1,
+        velocityAmount1h: amountNum,
+      });
+
+      await this.prisma.transaction.update({
+        where: { id: transactionId },
+        data: {
+          riskScore: assessment.score,
+          riskBand: assessment.band,
+        },
+      });
+
+      await this.eventBus.emit(
+        DomainEventName.RiskEvaluated,
+        {
+          transactionId,
+          score: assessment.score,
+          band: assessment.band,
+          factors: assessment.factors,
+          canAutoExecute: assessment.canAutoExecute,
+        },
+        {
+          organizationId,
+          actorId: envelope.actorId,
+          aggregateType: 'transaction',
+          aggregateId: transactionId,
+        },
+      );
+    } catch (error) {
+      this.logger.error(`Failed to process risk scoring for transaction: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }
