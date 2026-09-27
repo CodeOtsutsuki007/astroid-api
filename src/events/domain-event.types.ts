@@ -210,6 +210,17 @@ export interface ProposalExecutedPayload extends Record<string, unknown> {
   transactionId: string;
 }
 
+export interface TransactionInitiatedPayload extends Record<string, unknown> {
+  transactionId: string;
+  organizationId: string;
+  walletId?: string;
+  agentId?: string;
+  amount?: string;
+  asset?: string;
+  recipientAddress?: string;
+  memo?: string;
+}
+
 export interface TransactionCreatedPayload extends Record<string, unknown> {
   transactionId: string;
   walletId?: string;

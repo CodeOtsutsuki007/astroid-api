@@ -49,6 +49,7 @@ export const DomainEventName = {
   ProposalExecuted: 'proposal.executed',
 
   // Transaction / blockchain
+  TransactionInitiated: 'transaction.initiated',
   TransactionCreated: 'transaction.created',
   TransactionSubmitted: 'transaction.submitted',
   TransactionConfirmed: 'transaction.confirmed',
@@ -78,6 +79,7 @@ export const WEBHOOK_EVENTS: DomainEventNameType[] = [
   DomainEventName.WalletUpdated,
   DomainEventName.ProposalApproved,
   DomainEventName.ProposalRejected,
+  DomainEventName.TransactionInitiated,
   DomainEventName.TransactionCompleted,
   DomainEventName.TransactionFailed,
   DomainEventName.PolicyViolated,

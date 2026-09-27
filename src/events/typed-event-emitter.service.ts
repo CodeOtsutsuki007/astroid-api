@@ -53,6 +53,7 @@ export interface DomainEventMap {
   'proposal.executed': PayloadTypes.ProposalExecutedPayload;
 
   // Transaction
+  'transaction.initiated': PayloadTypes.TransactionInitiatedPayload;
   'transaction.created': PayloadTypes.TransactionCreatedPayload;
   'transaction.submitted': PayloadTypes.TransactionSubmittedPayload;
   'transaction.completed': PayloadTypes.TransactionCompletedPayload;
