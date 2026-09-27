@@ -72,6 +72,11 @@ export class RiskService {
 
     const input: RiskFactorsInput = {
       amount: payload.amount ? parseFloat(payload.amount) : 0,
+      asset: payload.asset || 'XLM',
+      knownRecipient: false,
+      recentTransactionCount: 0,
+      walletAgeDays: 0,
+      policyViolations: 0,
     };
 
     const assessment = this.engine.assess(input);

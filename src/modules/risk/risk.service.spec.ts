@@ -5,7 +5,7 @@ import { EventBusService } from '../../events/event-bus.service';
 import { PrismaService } from '../../database/prisma.service';
 import { DomainEventEnvelope, TransactionInitiatedPayload } from '../../events/domain-event.types';
 import { DomainEventName } from '../../events/event-names';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { RiskFactorsInput } from './risk.types';
 
 describe('RiskService event handling', () => {
@@ -83,6 +83,9 @@ describe('RiskService event handling', () => {
     );
   });
 });
+
+
+
 
 
 const lowRisk: RiskFactorsInput = {
