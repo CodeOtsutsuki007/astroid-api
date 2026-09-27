@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ArgumentMetadata } from '@nestjs/common';
 import { z } from 'zod';
 import { ZodValidationPipe } from './zod-validation.pipe';
