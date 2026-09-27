@@ -73,10 +73,12 @@ export class RiskService {
       const amountNum = parseFloat(amount) || 0;
       const assessment = this.engine.assess({
         amount: amountNum,
-        recipientAddress,
-        isNewRecipient: false,
-        velocityCount1h: 1,
-        velocityAmount1h: amountNum,
+        asset: envelope.payload.asset ?? 'USDC',
+        knownRecipient: true,
+        recentTransactionCount: 1,
+        walletAgeDays: 30,
+        policyViolations: 0,
+        hourUtc: new Date().getUTCHours(),
       });
 
       await this.prisma.transaction.update({

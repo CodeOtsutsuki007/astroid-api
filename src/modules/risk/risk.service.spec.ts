@@ -30,7 +30,8 @@ function createPrisma() {
 describe('RiskService', () => {
   it('emits a RiskEvaluated event with full factor breakdown', async () => {
     const eventBus = createEventBus();
-    const service = new RiskService(new RiskEngine(), eventBus as unknown as EventBusService);
+    const prisma = createPrisma();
+    const service = new RiskService(new RiskEngine(), eventBus as unknown as EventBusService, prisma as any);
 
     const assessment = await service.evaluate('org-1', lowRisk, {
       transactionId: 'tx-1',
@@ -53,7 +54,8 @@ describe('RiskService', () => {
 
   it('assess() returns a result without emitting events', async () => {
     const eventBus = createEventBus();
-    const service = new RiskService(new RiskEngine(), eventBus as unknown as EventBusService);
+    const prisma = createPrisma();
+    const service = new RiskService(new RiskEngine(), eventBus as unknown as EventBusService, prisma as any);
 
     const assessment = service.assess(lowRisk);
     expect(assessment.band).toBe(RiskBand.LOW);
